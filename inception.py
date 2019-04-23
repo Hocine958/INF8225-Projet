@@ -49,11 +49,11 @@ class SignaturesDataset(Dataset):
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.signatures_csv.iloc[idx, 0])
         image = io.imread(img_name)
-        genuine = self.signatures_csv.iloc[idx,2] #== 'True')
-        
+        genuine = self.signatures_csv.iloc[idx,2]
+        custom = (self.signatures_csv.iloc[idx,1] == 'french')
         if self.transform:
             image = self.transform(image)
-        sampletuple = (image, int(genuine))
+        sampletuple = (image, int(genuine),int(custom))
         return sampletuple
 
 
@@ -129,19 +129,26 @@ dataset = SignaturesDataset(csv_file='data/allSignatures.csv', root_dir='data/',
 # Creating data indices for training and validation splits:
 dataset_size = len(dataset)
 indices = list(range(dataset_size))
-training_size = int(dataset_size*0.9)
-valid_size = int(dataset_size*0.1)
+training_size = int(dataset_size*0.80)
+valid_size = int(dataset_size*0.10)
+test_size = int(dataset_size*0.10)
+
 shuffle_dataset = True
 if shuffle_dataset :
+    np.random.seed()
     np.random.shuffle(indices)
-train_indices, val_indices = indices[valid_size:], indices[:valid_size]
+train_indices, val_indices, test_indices = indices[valid_size+test_size:], indices[:valid_size], indices[valid_size:valid_size+test_size]
+training_size = len(train_indices)
+
 
 # Creating PT data samplers and loaders:
 train_sampler = SubsetRandomSampler(train_indices)
 valid_sampler = SubsetRandomSampler(val_indices)
+test_sampler = SubsetRandomSampler(test_indices)
 
 train_dataloader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE, sampler=train_sampler)
 valid_dataloader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE, sampler=valid_sampler)
+test_dataloader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE, sampler=test_sampler)
 
 
 def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
@@ -165,7 +172,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
             running_corrects = 0
 
             # Iterate over data.
-            for inputs, labels in dataloader:
+            for inputs, labels, custom in dataloader:
                 inputs = inputs.float().to(device)
                 labels = labels.to(device)
                 # zero the parameter gradients
@@ -209,9 +216,46 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
     model.load_state_dict(best_model)
     return model
 
-losses = []
-accuracies = []
-best_precision = 0
+def test_model(model, criterion):
+    best_model = copy.deepcopy(model.state_dict())
+    best_acc = 0.0
+    since = time.time()       
+    model.eval()   # Set model to evaluate mode
+    dataloader = test_dataloader
+    dataset_size = test_size
+
+    running_loss = 0.0
+    running_corrects = 0
+
+    # Iterate over data.
+    for inputs, labels, custom in dataloader:
+        inputs = inputs.float().to(device)
+        labels = labels.to(device)
+        # forward
+        with torch.set_grad_enabled(False):
+            outputs = model(inputs)
+            _, preds = torch.max(outputs, 1)
+            for i in range(len(custom)):
+                if(custom[i]==1):
+                    plt.imshow(inputs[i].cpu().data.numpy().transpose((1, 2, 0)))
+                    plt.title("expected " + str(labels[i].data)+" got "+str(preds[i].data))
+                    plt.show()
+            loss = criterion(outputs, labels)
+        # statistics
+        running_loss += loss.item() * inputs.size(0)
+        running_corrects += torch.sum(preds == labels.data)
+    test_loss = running_loss / dataset_size
+    test_acc = running_corrects.double() / dataset_size
+
+    print('Loss: {:.4f} Acc: {:.4f} Correct: {} out of {}'.format(
+         test_loss, test_acc,running_corrects,dataset_size))
+
+    time_elapsed = time.time() - since
+
+    print('Testing complete in {:.0f}m {:.0f}s'.format(
+        time_elapsed // 60, time_elapsed % 60))
+    print('Test Acc: {:4f}'.format(test_acc))
+
 
 
 inception = models.inception_v3(pretrained=True)
@@ -226,4 +270,10 @@ optimizer_ft = optim.SGD(inception.parameters(), lr=0.001,momentum = 0.9, nester
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
 inception = inception.to(device)  # if you have access to a gpu
-model = train_model(inception, criterion, optimizer_ft, exp_lr_scheduler, num_epochs=25)
+inception = train_model(inception, criterion, optimizer_ft, exp_lr_scheduler, num_epochs=40)
+""" Reloading a previous model """
+# inception.load_state_dict(torch.load("inception-batch10-80training.torch"))
+
+""" Saving the model """
+torch.save(inception.state_dict(),"inception-batch10-80training.torch")
+test_model(inception,criterion)

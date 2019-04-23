@@ -133,6 +133,7 @@ training_size = int(dataset_size*0.9)
 valid_size = int(dataset_size*0.1)
 shuffle_dataset = True
 if shuffle_dataset :
+    np.random.seed()
     np.random.shuffle(indices)
 train_indices, val_indices = indices[valid_size:], indices[:valid_size]
 

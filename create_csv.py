@@ -17,8 +17,8 @@ for f in files:
             csv.write(f+',dutch,false\n')
         else:
             csv.write(f+',dutch,true\n')
-    elif 'c_' in f:
-        if len(f) > seuil:
-            csv.write(f+',chinese,false\n')
+    elif 'f_' in f:
+        if len(f) > seuil+3:
+            csv.write(f+',french,false\n')
         else:
-            csv.write(f+',chinese,true\n')
+            csv.write(f+',french,true\n')
