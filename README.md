@@ -14,6 +14,7 @@ OU pour le faire manuellement :
 
 Enfin les modèles sont définis dans inception.py et vgg16.py
 
+Si vous avez accès aux signatures que nous avons ajouté, les ajouter au dossier data avant de lancer create_csv.py.
 ## Installation des paquets
 Voici la liste des paquets nécessaires pour faire tourner le projet :
 - pytorch, torchvision, numpy, matplotlib
