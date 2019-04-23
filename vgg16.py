@@ -54,7 +54,6 @@ class SignaturesDataset(Dataset):
         if self.transform:
             image = self.transform(image)
         sampletuple = (image, int(genuine))
-        # print(idx, genuine,self.signatures_csv.iloc[idx,2])
         return sampletuple
 
 
@@ -130,18 +129,12 @@ dataset = SignaturesDataset(csv_file='data/allSignatures.csv', root_dir='data/',
 # Creating data indices for training and validation splits:
 dataset_size = len(dataset)
 indices = list(range(dataset_size))
-# indices = list(range(dataset_size)[0:200])
 training_size = int(dataset_size*0.9)
 valid_size = int(dataset_size*0.1)
-# valid_size = 20
 shuffle_dataset = True
-# random_seed= 42
 if shuffle_dataset :
-    # np.random.seed()
     np.random.shuffle(indices)
 train_indices, val_indices = indices[valid_size:], indices[:valid_size]
-# print(len(train_indices))
-# print(len(val_indices))
 
 # Creating PT data samplers and loaders:
 train_sampler = SubsetRandomSampler(train_indices)
@@ -171,8 +164,6 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
             running_loss = 0.0
             running_corrects = 0
 
-            # print(len(dataloader))
-            # print(dataset_size)
             # Iterate over data.
             for inputs, labels in dataloader:
                 inputs = inputs.float().to(device)
@@ -230,19 +221,8 @@ features = list(vgg16.classifier.children())[:-1] # Remove last layer
 features.extend([nn.Linear(num_features, 2)]) # Add our layer with 4 outputs
 vgg16.classifier = nn.Sequential(*features) # Replace the model classifier
 criterion = nn.CrossEntropyLoss()
-# optimizer_ft = optim.SGD(vgg16.parameters(), lr=0.001, momentum=0.9, nesterov=True)
 optimizer_ft = optim.Adam(vgg16.parameters(), lr = 0.001)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
-# print(vgg16)
 
 vgg16 = vgg16.to(device)  # if you have access to a gpu
 model = train_model(vgg16, criterion, optimizer_ft, exp_lr_scheduler, num_epochs=5)
-# if precision > best_precision:
-#     best_precision = precision
-#     best_model = model
-
-# print(best_model,best_precision)
-# test(best_model, dataloader)
-# plt.plot(losses)
-# plt.plot(accuracies)
-# plt.show()

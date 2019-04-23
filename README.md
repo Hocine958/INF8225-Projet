@@ -4,7 +4,7 @@
 - Récupérer les ensembles de données (Training set et Test set) sur le site [ICDAR 2011 Signature Verification Competition](http://iapr-tc11.org/mediawiki/index.php/ICDAR_2011_Signature_Verification_Competition_%28SigComp2011%29).
 
 - Décompresser les deux archives à la racine du projet en conservant les noms de dossier "trainingSet" et "Testdata_SigComp2011".
-- Executer setup.bat pour regouper les données et les normaliser.
+- Executer setup.bat pour regrouper les données et les normaliser.
 
 OU pour le faire manuellement :
 
